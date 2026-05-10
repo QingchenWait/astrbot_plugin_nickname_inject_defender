@@ -3,7 +3,7 @@ display_name: 昵称注入阻断器
 desc: 将特定昵称设置为黑名单 (例如唤醒词)，阻止 QQ 群聊中因发送者昵称、引用昵称或 @ 昵称触发 LLM 回复。
 short_desc: 阻止昵称注入行为，例如昵称中包含唤醒词
 author: 青尘工作室
-version: 0.3.0
+version: 0.4.0
 support_platforms:
   - aiocqhttp
 astrbot_version: ">=4.0.0"

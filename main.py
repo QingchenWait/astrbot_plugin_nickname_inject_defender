@@ -34,6 +34,10 @@ class NicknameInjectDefenderPlugin(Star):
         if not nickname_wake_words:
             return
 
+        sender_wake_words = self._find_wake_words(event.get_sender_name(), wake_words)
+        if sender_wake_words and self._is_at_self(event):
+            return
+
         user_message_text = self._extract_user_message_text(event)
         if self._find_wake_words(user_message_text, wake_words):
             return
@@ -335,6 +339,23 @@ class NicknameInjectDefenderPlugin(Star):
         return str(self._raw_get(segment, "type") or "").lower(), (
             self._raw_get(segment, "data") or {}
         )
+
+    def _is_at_self(self, event: AstrMessageEvent) -> bool:
+        self_id = str(event.get_self_id())
+        for component in event.get_messages():
+            component_type = str(getattr(component, "type", "")).lower()
+            if component_type == "at" and str(getattr(component, "qq", "")) == self_id:
+                return True
+
+        raw_message = getattr(getattr(event, "message_obj", None), "raw_message", None)
+        message_segments = self._iter_raw_message_segments(
+            self._raw_get(raw_message, "message"),
+        )
+        for segment in message_segments:
+            segment_type, data = self._get_segment_type_and_data(segment)
+            if segment_type == "at" and str(data.get("qq", "")) == self_id:
+                return True
+        return False
 
     @staticmethod
     def _raw_get(raw_message: Any, key: str) -> Any:
