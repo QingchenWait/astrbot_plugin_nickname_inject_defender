@@ -12,6 +12,7 @@ from astrbot.api.star import Context, Star
 
 MODE_INHERIT = "继承自系统"
 MODE_MANUAL = "手动设置"
+CONFIG_DEBUG_MODE = "debug_mode"
 
 
 class NicknameInjectDefenderPlugin(Star):
@@ -42,11 +43,34 @@ class NicknameInjectDefenderPlugin(Star):
         if self._find_wake_words(user_message_text, wake_words):
             return
 
-        wake_word = nickname_wake_words[0]
-        logger.info(
-            f"由于唤醒词 {wake_word} 仅在用户昵称中存在，终止消息传递",
-        )
+        if self._is_debug_mode_enabled():
+            wake_word = nickname_wake_words[0]
+            logger.info(
+                f"由于唤醒词 {wake_word} 仅在用户昵称中存在，终止消息传递",
+            )
+            event.stop_event()
+            return
+
+        self._stop_event_silently(event)
+
+    def _is_debug_mode_enabled(self) -> bool:
+        return bool(self.config.get(CONFIG_DEBUG_MODE, False))
+
+    @staticmethod
+    def _stop_event_silently(event: AstrMessageEvent) -> None:
         event.stop_event()
+        event.should_call_llm(True)
+        # stop_event() 会创建空结果；清掉它可避免 RespondStage 打印空发送日志。
+        event.clear_result()
+        event.is_at_or_wake_command = False
+        try:
+            setattr(event, "_force_stopped", True)
+        except Exception:
+            pass
+
+        activated_handlers = event.get_extra("activated_handlers", None)
+        if isinstance(activated_handlers, list):
+            activated_handlers.clear()
 
     def _get_wake_words(self) -> list[str]:
         mode = str(self.config.get("wake_words_mode", MODE_INHERIT)).strip()
